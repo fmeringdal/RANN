@@ -9,13 +9,19 @@ pub struct LayerDense {
 
 fn gen_weights(count: usize) -> Vec<i64> {
     let mut rng = rand::thread_rng();
-    vec![rng.gen_range(-10, 10); count]
+    vec![0; count]
+        .iter()
+        .map(|_| rng.gen_range(-10, 10))
+        .collect()
 }
 
 impl LayerDense {
     pub fn new(input_nodes: usize, output_nodes: usize) -> Self {
         Self {
-            weights: vec![gen_weights(output_nodes); input_nodes],
+            weights: vec![0; output_nodes]
+                .iter()
+                .map(|_| gen_weights(input_nodes))
+                .collect(),
             biases: gen_weights(output_nodes),
             output: None,
         }
@@ -40,22 +46,22 @@ mod test {
 
     #[test]
     fn dense_single_layer() {
-        let mut layer = LayerDense::new(3, 2);
+        let mut layer = LayerDense::new(3, 7);
         let output = layer.forward(&vec![1, 1, 1]);
-        assert_eq!(output.len(), 2);
+        assert_eq!(output.len(), 7);
     }
 
     #[test]
     fn dense_multi_layer() {
         let mut layer1 = LayerDense::new(5, 4);
         let mut layer2 = LayerDense::new(4, 3);
-        let mut layer3 = LayerDense::new(3, 1);
+        let mut layer3 = LayerDense::new(3, 7);
         let input = &vec![1, -3, 3, 1, 6];
         let output = layer1.forward(input);
         assert_eq!(output.len(), 4);
         let output = layer2.forward(&output);
         assert_eq!(output.len(), 3);
         let output = layer3.forward(&output);
-        assert_eq!(output.len(), 1);
+        assert_eq!(output.len(), 7);
     }
 }
