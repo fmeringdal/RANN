@@ -28,7 +28,7 @@ impl LayerDense {
     }
 
     pub fn forward(&mut self, inputs: &Vec<i64>) -> Vec<i64> {
-        let output = self
+        let output: Vec<i64> = self
             .weights
             .iter()
             .map(|cell_weight| dot(cell_weight, inputs))
@@ -36,7 +36,10 @@ impl LayerDense {
             .map(|(x, y)| x + y)
             .collect();
 
-        output
+        let output2 = output.clone();
+        self.output = Some(output);
+
+        output2
     }
 }
 

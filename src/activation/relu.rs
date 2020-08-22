@@ -8,7 +8,7 @@ impl RELU {
     }
 
     pub fn forward(&mut self, inputs: &Vec<i64>) -> Vec<i64> {
-        let output = inputs
+        let output: Vec<i64> = inputs
             .iter()
             .map(|x| {
                 if *x > 0 {
@@ -18,7 +18,10 @@ impl RELU {
             })
             .collect();
 
-        output
+        let output2 = output.clone();
+        self.output = Some(output);
+
+        output2
     }
 }
 
