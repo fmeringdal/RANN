@@ -1,5 +1,5 @@
 pub struct RELU {
-    output: Option<Vec<i64>>,
+    output: Option<Vec<f32>>,
 }
 
 impl RELU {
@@ -7,14 +7,14 @@ impl RELU {
         Self { output: None }
     }
 
-    pub fn forward(&mut self, inputs: &Vec<i64>) -> Vec<i64> {
-        let output: Vec<i64> = inputs
+    pub fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
+        let output: Vec<f32> = inputs
             .iter()
             .map(|x| {
-                if *x > 0 {
+                if *x > 0. {
                     return *x;
                 }
-                0
+                0.
             })
             .collect();
 
@@ -22,6 +22,10 @@ impl RELU {
         self.output = Some(output);
 
         output2
+    }
+
+    pub fn backward(&mut self, desired_output: &Vec<f32>) -> Vec<f32> {
+        Vec::new()
     }
 }
 
@@ -32,6 +36,6 @@ mod test {
     #[test]
     fn relu() {
         let mut r = RELU::new();
-        assert_eq!(r.forward(&vec![-1, 0, 1]), [0, 0, 1])
+        assert_eq!(r.forward(&vec![-1., 0., 1.]), [0., 0., 1.])
     }
 }
