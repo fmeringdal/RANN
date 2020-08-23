@@ -8,6 +8,7 @@ pub struct LayerDense {
     input: Option<Vec<f32>>,
     input_nodes_count: usize,
     output_nodes_count: usize,
+    activation: bool,
 }
 
 fn gen_weights(count: usize) -> Vec<f32> {
@@ -16,7 +17,7 @@ fn gen_weights(count: usize) -> Vec<f32> {
 }
 
 impl LayerDense {
-    pub fn new(input_nodes: usize, output_nodes: usize) -> Self {
+    pub fn new(input_nodes: usize, output_nodes: usize, activation: bool) -> Self {
         Self {
             weights: vec![0; output_nodes]
                 .iter()
@@ -27,6 +28,7 @@ impl LayerDense {
             input: None,
             input_nodes_count: input_nodes,
             output_nodes_count: output_nodes,
+            activation,
         }
     }
 
@@ -37,9 +39,13 @@ impl LayerDense {
             .map(|cell_weight| dot(cell_weight, inputs))
             .zip(&self.biases)
             .map(|(x, y)| x + y)
-            .map(|x| 1_f32 / (1_f32 + 2.718_f32.powf(x)))
+            .map(|x| {
+                if self.activation {
+                    return 1_f32 / (1_f32 + 2.718_f32.powf(x));
+                }
+                x
+            })
             .collect();
-
         let output2 = output.clone();
         self.output = Some(output);
         self.input = Some(inputs.clone());
@@ -48,21 +54,30 @@ impl LayerDense {
     }
 
     pub fn backward(&mut self, desired_output: &Vec<f32>) -> Vec<f32> {
-        let desired_input: Vec<f32> = Vec::with_capacity(self.input_nodes_count);
-        let error: Vec<f32> = desired_output
-            .iter()
-            .zip(self.output.as_ref().unwrap())
-            .map(|(desired, actual)| actual - desired)
-            .collect();
+        let desired_input: Vec<f32> = vec![0.3; self.input_nodes_count];
 
-        self.weights = self
-            .weights
-            .iter()
-            .zip(error)
-            .map(|(node_weights, error)| node_weights.iter().map(|weight| weight * error).collect())
-            .collect();
+        for i in 0..self.output_nodes_count {
+            let output = self.output.as_ref().unwrap()[i];
+            if output.is_nan() {
+                continue;
+            }
+            let error = output - desired_output[i];
+            println!("Output: {}, des_output: {}", output, desired_output[i]);
+            if self.activation && i == self.output_nodes_count - 1 {
+                panic!();
+            }
 
-        Vec::new()
+            let sigmoid_derivative = output * (1. - output);
+            self.weights[i] = self.weights[i]
+                .iter()
+                .map(|weight| {
+                    let adjustment = error * sigmoid_derivative;
+                    weight + adjustment
+                })
+                .collect();
+        }
+
+        desired_input
     }
 }
 
@@ -72,16 +87,16 @@ mod test {
 
     #[test]
     fn dense_single_layer() {
-        let mut layer = LayerDense::new(3, 7);
+        let mut layer = LayerDense::new(3, 7, true);
         let output = layer.forward(&vec![1.0, 1.0, 1.0]);
         assert_eq!(output.len(), 7);
     }
 
     #[test]
     fn dense_multi_layer() {
-        let mut layer1 = LayerDense::new(5, 4);
-        let mut layer2 = LayerDense::new(4, 3);
-        let mut layer3 = LayerDense::new(3, 7);
+        let mut layer1 = LayerDense::new(5, 4, true);
+        let mut layer2 = LayerDense::new(4, 3, true);
+        let mut layer3 = LayerDense::new(3, 7, true);
         let input = &vec![1.0, -3.0, 3.0, 1.0, 6.0];
         let output = layer1.forward(input);
         assert_eq!(output.len(), 4);
