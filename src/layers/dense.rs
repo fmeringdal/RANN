@@ -51,26 +51,26 @@ impl LayerDense {
     pub fn backward(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
         let learning_rate = 0.1;
         let outputs = self.output.as_ref().unwrap();
-        let mut backward_derivatives = vec![0.;self.input_nodes_count];
+        let mut backward_derivatives = vec![0.; self.input_nodes_count];
         for i in 0..self.output_nodes_count {
-            let output = outputs[i]; 
-            let sigmoid_derivative = (1.-output)*output;
-            self.weights[i] = self.weights[i].iter().map(|weight| {
-                weight - learning_rate*sigmoid_derivative*derivatives[i]
-            }).collect();
+            let output = outputs[i];
+            for j in 0..self.weights[i].len() {
+                //  let current_w = self.weights[i][j];
+                let update = learning_rate * output * (1. - output) * derivatives[i];
+                self.weights[i][j] += update;
+            }
         }
 
         for i in 0..self.input_nodes_count {
             let mut der = 0.;
             for j in 0..self.output_nodes_count {
-                let weight = self.weights[i][j];
+                let weight = self.weights[j][i];
                 let out_deri = derivatives[j];
                 let output = outputs[j];
-                der += weight*output*out_deri;
+                der += weight * output * out_deri;
             }
             backward_derivatives[i] = der;
         }
-
         backward_derivatives
     }
 }

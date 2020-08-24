@@ -24,11 +24,12 @@ impl Rann {
         let mut output = input.clone();
         for layer in self.layers.iter_mut() {
             output = layer.forward(&output);
+            println!("After forward from layer: {:?}", output);
         }
         output
     }
 
-    pub fn backward(&mut self, desired_output: &Vec<f32>) {
+    fn backward(&mut self, desired_output: &Vec<f32>) {
         let mut desired_output = desired_output.clone();
         for layer in self.layers.iter_mut().rev() {
             desired_output = layer.backward(&desired_output);
@@ -42,9 +43,17 @@ impl Rann {
 
         for (training, output) in training_set.iter().zip(output_set) {
             let pred_output = self.forward(&training);
-            let cost: f32 = pred_output.iter().zip(output).map(|(p, t)| (p - t).powi(2)).sum();
+            let cost: f32 = pred_output
+                .iter()
+                .zip(output)
+                .map(|(p, t)| (p - t).powi(2))
+                .sum();
             println!("Cost: {}", cost);
-            let grad = pred_output.iter().zip(output).map(|(p, t)| 2.*(p - t)).collect();
+            let grad = pred_output
+                .iter()
+                .zip(output)
+                .map(|(p, t)| 2. * (p - t))
+                .collect();
             self.backward(&grad);
         }
     }
@@ -67,9 +76,9 @@ mod test {
 
     #[test]
     fn train_rann() {
-        let training = vec![vec![4., -2., 34., -6., 2.]; 2000000];
-        let output = vec![vec![17.]; 2000000];
-        let mut rann = Rann::new(&vec![4, 1]);
+        let training = vec![vec![4., -2., 34., -6., 2.]; 20000];
+        let output = vec![vec![0.17]; 20000];
+        let mut rann = Rann::new(&vec![5, 4, 2, 1]);
         rann.train(&training, &output);
         let output = rann.forward(&training[0]);
         println!("Got last output: {:?}", output);
