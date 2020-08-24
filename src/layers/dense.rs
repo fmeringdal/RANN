@@ -62,7 +62,7 @@ impl LayerDense {
                 //  let current_w = self.weights[i][j];
                 let update =
                     learning_rate * self.activation.compute_derivative(output) * derivatives[i];
-                self.weights[i][j] += update;
+                self.weights[i][j] -= update;
             }
         }
 
