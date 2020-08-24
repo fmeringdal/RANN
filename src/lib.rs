@@ -1,4 +1,4 @@
-mod activation;
+mod activations;
 mod layers;
 mod math;
 pub mod rann;

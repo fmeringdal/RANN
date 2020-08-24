@@ -1,3 +1,4 @@
+use crate::activations::{ActivationFunc, Sigmoid, RELU};
 use crate::layers::dense::LayerDense;
 
 pub struct Rann {
@@ -10,11 +11,14 @@ impl Rann {
         for i in 0..layer_sizes.len() - 1 {
             let input_size = layer_sizes[i];
             let output_size = layer_sizes[i + 1];
-            layers.push(LayerDense::new(
-                input_size.clone(),
-                output_size.clone(),
-                i < layer_sizes.len() - 2,
-            ));
+            let r: Box<dyn ActivationFunc>;
+            if i == layer_sizes.len() - 2 {
+                r = Box::new(RELU::new());
+            } else {
+                r = Box::new(Sigmoid::new());
+            }
+
+            layers.push(LayerDense::new(input_size.clone(), output_size.clone(), r));
         }
 
         Self { layers }
@@ -37,10 +41,6 @@ impl Rann {
     }
 
     pub fn train(&mut self, training_set: &Vec<Vec<f32>>, output_set: &Vec<Vec<f32>>) {
-        // calculate cost function
-        // calculate derivative cost by each node in output
-        // pass back
-
         for (training, output) in training_set.iter().zip(output_set) {
             let pred_output = self.forward(&training);
             let cost: f32 = pred_output

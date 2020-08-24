@@ -1,3 +1,4 @@
+use crate::activations::{ActivationFunc, Sigmoid, RELU};
 use crate::math::dot;
 use rand::Rng;
 
@@ -8,11 +9,15 @@ pub struct LayerDense {
     input: Option<Vec<f32>>,
     input_nodes_count: usize,
     output_nodes_count: usize,
-    activation: bool,
+    activation: Box<dyn ActivationFunc>,
 }
 
 impl LayerDense {
-    pub fn new(input_nodes: usize, output_nodes: usize, activation: bool) -> Self {
+    pub fn new(
+        input_nodes: usize,
+        output_nodes: usize,
+        activation: Box<dyn ActivationFunc>,
+    ) -> Self {
         Self {
             weights: vec![0; output_nodes]
                 .iter()
@@ -38,8 +43,7 @@ impl LayerDense {
             .iter()
             .map(|cell_weight| dot(cell_weight, inputs))
             .zip(&self.biases)
-            .map(|(x, y)| x + y)
-            .map(|x| 1_f32 / (1_f32 + 2.718_f32.powf(x)))
+            .map(|(x, y)| self.activation.compute(x + y))
             .collect();
         let output2 = output.clone();
         self.output = Some(output);
@@ -56,7 +60,8 @@ impl LayerDense {
             let output = outputs[i];
             for j in 0..self.weights[i].len() {
                 //  let current_w = self.weights[i][j];
-                let update = learning_rate * output * (1. - output) * derivatives[i];
+                let update =
+                    learning_rate * self.activation.compute_derivative(output) * derivatives[i];
                 self.weights[i][j] += update;
             }
         }
@@ -81,16 +86,16 @@ mod test {
 
     #[test]
     fn dense_single_layer() {
-        let mut layer = LayerDense::new(3, 7, true);
+        let mut layer = LayerDense::new(3, 7, Box::new(Sigmoid::new()));
         let output = layer.forward(&vec![1.0, 1.0, 1.0]);
         assert_eq!(output.len(), 7);
     }
 
     #[test]
     fn dense_multi_layer() {
-        let mut layer1 = LayerDense::new(5, 4, true);
-        let mut layer2 = LayerDense::new(4, 3, true);
-        let mut layer3 = LayerDense::new(3, 7, true);
+        let mut layer1 = LayerDense::new(5, 4, Box::new(Sigmoid::new()));
+        let mut layer2 = LayerDense::new(4, 3, Box::new(Sigmoid::new()));
+        let mut layer3 = LayerDense::new(3, 7, Box::new(Sigmoid::new()));
         let input = &vec![1.0, -3.0, 3.0, 1.0, 6.0];
         let output = layer1.forward(input);
         assert_eq!(output.len(), 4);
