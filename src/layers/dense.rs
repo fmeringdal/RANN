@@ -39,12 +39,7 @@ impl LayerDense {
             .map(|cell_weight| dot(cell_weight, inputs))
             .zip(&self.biases)
             .map(|(x, y)| x + y)
-            .map(|x| {
-                if self.activation {
-                    return 1_f32 / (1_f32 + 2.718_f32.powf(x));
-                }
-                x
-            })
+            .map(|x| 1_f32 / (1_f32 + 2.718_f32.powf(x)))
             .collect();
         let output2 = output.clone();
         self.output = Some(output);
@@ -53,28 +48,14 @@ impl LayerDense {
         output2
     }
 
-    pub fn backward(&mut self, desired_output: &Vec<f32>) -> Vec<f32> {
+    pub fn backward(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
         let desired_input: Vec<f32> = vec![0.3; self.input_nodes_count];
-
+        let outputs = self.output.as_ref().unwrap();
         for i in 0..self.output_nodes_count {
-            let output = self.output.as_ref().unwrap()[i];
-            if output.is_nan() {
-                continue;
-            }
-            let error = output - desired_output[i];
-            println!("Output: {}, des_output: {}", output, desired_output[i]);
-            if self.activation && i == self.output_nodes_count - 1 {
-                panic!();
-            }
-
-            let sigmoid_derivative = output * (1. - output);
-            self.weights[i] = self.weights[i]
-                .iter()
-                .map(|weight| {
-                    let adjustment = error * sigmoid_derivative;
-                    weight + adjustment
-                })
-                .collect();
+            let output = outputs[i]; 
+            self.weights[i] = self.weights[i].iter().map(|weight| {
+                weight - 0.1*(1. - output)*output*derivatives[i]
+            }).collect();
         }
 
         desired_input

@@ -1,4 +1,4 @@
-mod Network;
+// mod Network;
 mod activation;
 mod layers;
 mod math;
