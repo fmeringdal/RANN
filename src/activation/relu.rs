@@ -1,31 +1,34 @@
-pub struct RELU {
-    output: Option<Vec<f32>>,
+trait ActivationFunc {
+    fn compute(val: f32) -> f32;
+    fn compute_derivative(val: f32) -> f32;
 }
 
-impl RELU {
-    pub fn new() -> Self {
-        Self { output: None }
+struct RELU {}
+struct Sigmoid {}
+
+impl ActivationFunc for RELU {
+    fn compute(val: f32) -> f32 {
+        if val > 0. {
+            return val;
+        }
+        0.
     }
 
-    pub fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
-        let output: Vec<f32> = inputs
-            .iter()
-            .map(|x| {
-                if *x > 0. {
-                    return *x;
-                }
-                0.
-            })
-            .collect();
+    fn compute_derivative(val: f32) -> f32 {
+        if val > 0. {
+            return 1.;
+        }
+        0.
+    }
+}
 
-        let output2 = output.clone();
-        self.output = Some(output);
-
-        output2
+impl ActivationFunc for Sigmoid {
+    fn compute(val: f32) -> f32 {
+        1_f32 / (1_f32 + 2.71828_f32.powf(-val))
     }
 
-    pub fn backward(&mut self, desired_output: &Vec<f32>) -> Vec<f32> {
-        Vec::new()
+    fn compute_derivative(val: f32) -> f32 {
+        val * (1. - val)
     }
 }
 
@@ -34,8 +37,34 @@ mod test {
     use super::*;
 
     #[test]
-    fn relu() {
-        let mut r = RELU::new();
-        assert_eq!(r.forward(&vec![-1., 0., 1.]), [0., 0., 1.])
+    fn relu_compute() {
+        assert_eq!(RELU::compute(-1.), 0.);
+        assert_eq!(RELU::compute(0.), 0.);
+        assert_eq!(RELU::compute(1.2), 1.2);
+    }
+
+    #[test]
+    fn relu_compute_derivative() {
+        assert_eq!(RELU::compute_derivative(-1.), 0.);
+        assert_eq!(RELU::compute_derivative(0.), 0.);
+        assert_eq!(RELU::compute_derivative(1.3), 1.);
+    }
+
+    #[test]
+    fn sigmoid_compute() {
+        assert!(Sigmoid::compute(-100.) < 0.01);
+        println!("Val: {}", Sigmoid::compute(0.2));
+        assert!(Sigmoid::compute(-0.2) > 0.45 && 0.451 > Sigmoid::compute(-0.2));
+        assert!(Sigmoid::compute(0.) == 0.5);
+        assert!(Sigmoid::compute(0.2) > 0.549 && Sigmoid::compute(0.2) < 0.5499);
+        assert!(Sigmoid::compute(100.) > 0.99);
+    }
+
+    #[test]
+    fn sigmoid_compute_derivative() {
+        assert_eq!(Sigmoid::compute_derivative(-1.), -2.);
+        assert_eq!(Sigmoid::compute_derivative(0.), 0.);
+        assert_eq!(Sigmoid::compute_derivative(1.), 0.);
+        assert_eq!(Sigmoid::compute_derivative(2.), -2.);
     }
 }

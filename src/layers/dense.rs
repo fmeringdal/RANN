@@ -11,25 +11,25 @@ pub struct LayerDense {
     activation: bool,
 }
 
-fn gen_weights(count: usize) -> Vec<f32> {
-    let mut rng = rand::thread_rng();
-    vec![0; count].iter().map(|_| rng.gen::<f32>()).collect()
-}
-
 impl LayerDense {
     pub fn new(input_nodes: usize, output_nodes: usize, activation: bool) -> Self {
         Self {
             weights: vec![0; output_nodes]
                 .iter()
-                .map(|_| gen_weights(input_nodes))
+                .map(|_| Self::gen_weights(input_nodes))
                 .collect(),
-            biases: gen_weights(output_nodes),
+            biases: Self::gen_weights(output_nodes),
             output: None,
             input: None,
             input_nodes_count: input_nodes,
             output_nodes_count: output_nodes,
             activation,
         }
+    }
+
+    fn gen_weights(count: usize) -> Vec<f32> {
+        let mut rng = rand::thread_rng();
+        vec![0; count].iter().map(|_| rng.gen::<f32>()).collect()
     }
 
     pub fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
