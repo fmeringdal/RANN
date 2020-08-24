@@ -50,7 +50,6 @@ impl LayerDense {
 
     pub fn backward(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
         let learning_rate = 0.1;
-        let desired_input: Vec<f32> = vec![0.3; self.input_nodes_count];
         let outputs = self.output.as_ref().unwrap();
         let mut backward_derivatives = vec![0.;self.input_nodes_count];
         for i in 0..self.output_nodes_count {

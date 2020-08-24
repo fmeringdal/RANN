@@ -36,9 +36,16 @@ impl Rann {
     }
 
     pub fn train(&mut self, training_set: &Vec<Vec<f32>>, output_set: &Vec<Vec<f32>>) {
+        // calculate cost function
+        // calculate derivative cost by each node in output
+        // pass back
+
         for (training, output) in training_set.iter().zip(output_set) {
             let pred_output = self.forward(&training);
-            self.backward(output);
+            let cost: f32 = pred_output.iter().zip(output).map(|(p, t)| (p - t).powi(2)).sum();
+            println!("Cost: {}", cost);
+            let grad = pred_output.iter().zip(output).map(|(p, t)| 2.*(p - t)).collect();
+            self.backward(&grad);
         }
     }
 }
