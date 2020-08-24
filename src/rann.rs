@@ -62,6 +62,7 @@ impl Rann {
 #[cfg(test)]
 mod test {
     use super::*;
+    use rand::Rng;
 
     #[test]
     fn rann_dims() {
@@ -76,11 +77,16 @@ mod test {
 
     #[test]
     fn train_rann() {
-        let training = vec![vec![4., -2., 34., -6., 2.]; 20000];
-        let output = vec![vec![0.17]; 20000];
+        let mut rnd = rand::thread_rng();
+        let training = vec![0; 20000]
+            .iter()
+            .map(|_| vec![rnd.gen(), rnd.gen(), rnd.gen(), rnd.gen(), rnd.gen()])
+            .collect();
+        let output = vec![vec![0.47]; 20000];
         let mut rann = Rann::new(&vec![5, 4, 2, 1]);
         rann.train(&training, &output);
-        let output = rann.forward(&training[0]);
-        println!("Got last output: {:?}", output);
+        let pred_output = rann.forward(&training[0]);
+        println!("Pred output: {:?}", pred_output);
+        assert!(pred_output[0] - output[0][0] < 0.1 || output[0][0] - pred_output[0] < 0.1);
     }
 }
