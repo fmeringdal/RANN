@@ -28,7 +28,6 @@ impl Rann {
         let mut output = input.clone();
         for layer in self.layers.iter_mut() {
             output = layer.forward(&output);
-            println!("After forward from layer: {:?}", output);
         }
         output
     }
