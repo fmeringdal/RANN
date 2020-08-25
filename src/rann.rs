@@ -48,11 +48,13 @@ impl Rann {
                 .map(|(p, t)| (p - t).powi(2))
                 .sum();
             println!("Cost: {}", cost);
+            print!("Pred: {:?}", pred_output);
             let grad = pred_output
                 .iter()
                 .zip(output)
                 .map(|(p, t)| 2. * (p - t))
                 .collect();
+            println!("Grad: {:?}", grad);
             self.backward(&grad);
         }
     }

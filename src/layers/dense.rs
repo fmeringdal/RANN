@@ -1,5 +1,5 @@
 use crate::activations::{ActivationFunc, Sigmoid, RELU};
-use crate::math::dot;
+use crate::math::{cut_val, dot};
 use rand::Rng;
 
 pub struct LayerDense {
@@ -56,15 +56,6 @@ impl LayerDense {
         let learning_rate = 0.1;
         let outputs = self.output.as_ref().unwrap();
         let mut backward_derivatives = vec![0.; self.input_nodes_count];
-        for i in 0..self.output_nodes_count {
-            let output = outputs[i];
-            for j in 0..self.weights[i].len() {
-                //  let current_w = self.weights[i][j];
-                let update =
-                    learning_rate * self.activation.compute_derivative(output) * derivatives[i];
-                self.weights[i][j] -= update;
-            }
-        }
 
         for i in 0..self.input_nodes_count {
             let mut der = 0.;
@@ -73,8 +64,24 @@ impl LayerDense {
                 let out_deri = derivatives[j];
                 let output = outputs[j];
                 der += weight * output * out_deri;
+                if output == 0. {
+                    der += 0.1;
+                }
             }
-            backward_derivatives[i] = der;
+            backward_derivatives[i] = cut_val(der, 2.);
+        }
+
+        for i in 0..self.output_nodes_count {
+            let output = outputs[i];
+            for j in 0..self.weights[i].len() {
+                //  let current_w = self.weights[i][j];
+                let mut update = learning_rate
+                    * self.activation.compute_derivative(self.weights[i][j])
+                    * derivatives[i];
+                update = cut_val(update, 2.);
+                self.weights[i][j] -= update;
+                println!("Weight update: {}", update);
+            }
         }
         backward_derivatives
     }

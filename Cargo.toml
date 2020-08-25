@@ -10,4 +10,4 @@ license = "MIT"
 
 [dependencies]
 rand = "0.7"
-
+csv = "1.1"

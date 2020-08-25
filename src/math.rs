@@ -26,6 +26,16 @@ pub fn mat_multiply_mat(vec: &Vec<Vec<f32>>, mat: &Vec<Vec<f32>>) -> Vec<Vec<f32
     res
 }
 
+pub fn cut_val(val: f32, max: f32) -> f32 {
+    if val > max {
+        max
+    } else if -max < val {
+        -max
+    } else {
+        val
+    }
+}
+
 pub fn mean_squared_error(vec1: &Vec<f32>, vec2: &Vec<f32>) -> f32 {
     let size = vec1.len();
     if size == 0 {
