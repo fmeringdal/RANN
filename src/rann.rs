@@ -13,7 +13,8 @@ impl Rann {
             let output_size = layer_sizes[i + 1];
             let r: Box<dyn ActivationFunc>;
             if i == layer_sizes.len() - 2 {
-                r = Box::new(RELU::new());
+                // r = Box::new(RELU::new());
+                r = Box::new(Sigmoid::new());
             } else {
                 r = Box::new(Sigmoid::new());
             }
@@ -42,19 +43,26 @@ impl Rann {
     pub fn train(&mut self, training_set: &Vec<Vec<f32>>, output_set: &Vec<Vec<f32>>) {
         for (training, output) in training_set.iter().zip(output_set) {
             let pred_output = self.forward(&training);
+
             let cost: f32 = pred_output
                 .iter()
                 .zip(output)
-                .map(|(p, t)| (p - t).powi(2))
+                .map(|(p, t)| (t - p).powi(2))
                 .sum();
+            println!("--------------------------------------");
             println!("Cost: {}", cost);
-            print!("Pred: {:?}", pred_output);
+            println!("Real: {:?}", output);
+            println!("Pred: {:?}", pred_output);
+            println!(
+                "Last weights: {:?}",
+                self.layers[self.layers.len() - 1].weights
+            );
             let grad = pred_output
                 .iter()
                 .zip(output)
-                .map(|(p, t)| 2. * (p - t))
+                .map(|(p, t)| 2. * (t - p))
                 .collect();
-            println!("Grad: {:?}", grad);
+            // println!("Grad: {:?}", grad);
             self.backward(&grad);
         }
     }

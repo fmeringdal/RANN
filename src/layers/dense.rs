@@ -3,7 +3,7 @@ use crate::math::{cut_val, dot};
 use rand::Rng;
 
 pub struct LayerDense {
-    weights: Vec<Vec<f32>>,
+    pub weights: Vec<Vec<f32>>,
     biases: Vec<f32>,
     output: Option<Vec<f32>>,
     input: Option<Vec<f32>>,
@@ -23,7 +23,7 @@ impl LayerDense {
                 .iter()
                 .map(|_| Self::gen_weights(input_nodes))
                 .collect(),
-            biases: Self::gen_weights(output_nodes),
+            biases: vec![0.2; output_nodes],
             output: None,
             input: None,
             input_nodes_count: input_nodes,
@@ -45,10 +45,20 @@ impl LayerDense {
             .zip(&self.biases)
             .map(|(x, y)| self.activation.compute(x + y))
             .collect();
+        let without_act: Vec<f32> = self
+            .weights
+            .iter()
+            .map(|w| dot(w, inputs))
+            .zip(&self.biases)
+            .map(|(x, y)| x + y)
+            .collect();
         let output2 = output.clone();
         self.output = Some(output);
         self.input = Some(inputs.clone());
-
+        if self.output_nodes_count == 10 && false {
+            println!("Biases: {:?}", self.biases);
+            println!("Last output: {:?}", without_act);
+        }
         output2
     }
 
@@ -62,25 +72,28 @@ impl LayerDense {
             for j in 0..self.output_nodes_count {
                 let weight = self.weights[j][i];
                 let out_deri = derivatives[j];
-                let output = outputs[j];
-                der += weight * output * out_deri;
-                if output == 0. {
-                    der += 0.1;
-                }
+                let output = cut_val(outputs[j], 0.98);
+                der += weight * self.activation.compute_derivative(output) * out_deri;
             }
-            backward_derivatives[i] = cut_val(der, 2.);
+            backward_derivatives[i] = der;
         }
 
+        if self.output_nodes_count == 10 && false {
+            println!("Backwards grads: {:?}", backward_derivatives);
+        }
+
+        let inputs = self.input.clone().unwrap();
         for i in 0..self.output_nodes_count {
-            let output = outputs[i];
+            let output = cut_val(outputs[i], 0.98);
             for j in 0..self.weights[i].len() {
                 //  let current_w = self.weights[i][j];
                 let mut update = learning_rate
-                    * self.activation.compute_derivative(self.weights[i][j])
+                    * self.activation.compute_derivative(output)
+                    * inputs[j]
                     * derivatives[i];
                 update = cut_val(update, 2.);
                 self.weights[i][j] -= update;
-                println!("Weight update: {}", update);
+                // println!("Weight update: {}", update);
             }
         }
         backward_derivatives

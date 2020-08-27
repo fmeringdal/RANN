@@ -36,6 +36,12 @@ pub fn cut_val(val: f32, max: f32) -> f32 {
     }
 }
 
+pub fn one_hot_encode(i: usize, size: usize) -> Vec<usize> {
+    let mut one_hot_encoded = vec![0; size];
+    one_hot_encoded[i] = 1;
+    one_hot_encoded
+}
+
 pub fn mean_squared_error(vec1: &Vec<f32>, vec2: &Vec<f32>) -> f32 {
     let size = vec1.len();
     if size == 0 {

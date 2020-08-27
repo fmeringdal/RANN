@@ -1,4 +1,5 @@
 //tutorial-read-01.rs
+use crate::math::one_hot_encode;
 use crate::rann::Rann;
 use std::env;
 use std::error::Error;
@@ -29,6 +30,12 @@ fn run() -> Result<(Vec<Vec<f32>>, Vec<Vec<f32>>), Box<dyn Error>> {
         for i in 0..28 * 28 {
             training[i] = record.get(i + 1).unwrap().parse::<f32>().unwrap();
         }
+        //  labels.push(
+        //    one_hot_encode(label, 10)
+        //        .into_iter()
+        //        .map(|val| val as f32)
+        //        .collect(),
+        //);
         labels.push(vec![label]);
         training_set.push(training);
         counter += 1;
@@ -60,7 +67,7 @@ mod test {
             }
             Ok((training_set, labels)) => {
                 println!("Labes: {:?}", labels);
-                let mut rann = Rann::new(&vec![28 * 28, 100, 40, 1]);
+                let mut rann = Rann::new(&vec![28 * 28, 100, 1]);
                 for _ in 0..100 {
                     rann.train(&training_set, &labels);
                 }
