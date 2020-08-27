@@ -1,18 +1,19 @@
 use crate::activations::{ActivationFunc, Sigmoid, RELU};
 use rand::Rng;
+use std::rc::Rc;
 
 pub struct Node {
     pub inputs: Vec<f32>,
     pub output: f32,
     pub weights: Vec<f32>,
-    pub activation: Box<dyn ActivationFunc>,
+    pub activation: Rc<dyn ActivationFunc>,
     pub number_of_inputs: usize,
 }
 
 impl Node {
     pub fn new(
         number_of_inputs: usize,
-        activation: Box<dyn ActivationFunc>,
+        activation: Rc<dyn ActivationFunc>,
         default_weights: Option<Vec<f32>>,
     ) -> Self {
         Self {
@@ -56,20 +57,79 @@ impl Node {
     }
 }
 
+pub struct LayerDense {
+    nodes: Vec<Node>,
+    input_nodes_count: usize,
+    nodes_count: usize,
+}
+
+impl LayerDense {
+    pub fn new(
+        input_nodes_count: usize,
+        nodes_count: usize,
+        activation: Rc<dyn ActivationFunc>,
+    ) -> Self {
+        Self {
+            input_nodes_count,
+            nodes_count,
+            nodes: vec![0; nodes_count]
+                .iter()
+                .map(|_| Node::new(input_nodes_count, activation.clone(), None))
+                .collect(),
+        }
+    }
+
+    pub fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
+        self.nodes
+            .iter_mut()
+            .map(|node| node.forward(inputs))
+            .collect()
+    }
+
+    pub fn backwards(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
+        // derivatives = [dc_da1, dc_da2]
+        let learning_rate = 0.01;
+        let mut derivatives_for_input_nodes = vec![0.; self.input_nodes_count];
+        for i in 0..self.input_nodes_count {
+            derivatives_for_input_nodes[i] = self
+                .nodes
+                .iter()
+                .enumerate()
+                .map(|(j, node)| {
+                    node.activation.compute_derivative(node.output)
+                        * node.weights[i]
+                        * derivatives[j]
+                })
+                .sum();
+        }
+
+        for i in 0..self.nodes_count {
+            let node_ders = self.nodes[i]
+                .compute_derivatives(derivatives[i])
+                .iter()
+                .map(|val| val * learning_rate)
+                .collect();
+            self.nodes[i].update_weights(node_ders);
+        }
+
+        derivatives_for_input_nodes
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn node_forward() {
-        let mut node = Node::new(3, Box::new(RELU::new()), Some(vec![1., 2., 3.]));
+        let mut node = Node::new(3, Rc::new(RELU::new()), Some(vec![1., 2., 3.]));
         let output = node.forward(&vec![1., 2., 3.]);
         assert_eq!(output, 14.);
     }
 
     #[test]
     fn node_derivatives_perfect_weights() {
-        let mut node = Node::new(3, Box::new(RELU::new()), Some(vec![1., 2., 3.]));
+        let mut node = Node::new(3, Rc::new(RELU::new()), Some(vec![1., 2., 3.]));
         let output = node.forward(&vec![1., 2., 3.]);
         let dervs = node.compute_derivatives(0.);
         assert_eq!(dervs, vec![0., 0., 0.]);
@@ -77,25 +137,24 @@ mod test {
 
     #[test]
     fn node_derivatives() {
-        let mut node = Node::new(3, Box::new(Sigmoid::new()), Some(vec![0.1, 0.3, 0.5]));
+        let mut node = Node::new(3, Rc::new(Sigmoid::new()), Some(vec![0.1, 0.3, 0.5]));
         let output = node.forward(&vec![1., 4., 5.]);
         let dervs = node.compute_derivatives(0.1502);
         assert_eq!(dervs, vec![0.002, 0.0079, 0.0099]);
     }
 
     #[test]
-    fn node_layer() {
-        let mut node1 = Node::new(3, Box::new(Sigmoid::new()), None);
-        let mut node2 = Node::new(3, Box::new(Sigmoid::new()), None);
-        let mut node3 = Node::new(2, Box::new(Sigmoid::new()), None);
+    fn node_compose() {
+        let mut node1 = Node::new(3, Rc::new(Sigmoid::new()), None);
+        let mut node2 = Node::new(3, Rc::new(Sigmoid::new()), None);
+        let mut node3 = Node::new(2, Rc::new(Sigmoid::new()), None);
+        let input = vec![1.1, 1.2, 1.3];
+        let target = 0.25;
         for _ in 0..100000 {
-            let input = vec![1.1, 1.2, 1.3];
             let output1 = node1.forward(&input);
             let output2 = node2.forward(&input);
             let output3 = node3.forward(&vec![output1, output2]);
-            println!("Out: {}", output3);
-            println!("Error: {}", (output3 - 0.25).powi(2));
-            let error_delta = output3 - 0.25;
+            let error_delta = output3 - target;
             let node3de = node3.compute_derivatives(error_delta);
             let common = node3.activation.compute_derivative(node3.output) * error_delta;
             let dc_da11 = common * node3.weights[0];
@@ -106,9 +165,33 @@ mod test {
             node1.update_weights(node1de.iter().map(|d| d * learning_rate).collect());
             node2.update_weights(node2de.iter().map(|d| d * learning_rate).collect());
             node3.update_weights(node3de.iter().map(|d| d * learning_rate).collect());
-            // println!("NOde 1 de: {:?}", node1de);
-            // println!("NOde 2 de: {:?}", node2de);
-            // println!("NOde 3 de: {:?}", node3de);
         }
+
+        let output1 = node1.forward(&input);
+        let output2 = node2.forward(&input);
+        let output3 = node3.forward(&vec![output1, output2]);
+        let error_delta = output3 - target;
+        assert!(error_delta < 0.002);
+    }
+
+    #[test]
+    fn node_layer() {
+        let mut layer1 = LayerDense::new(3, 3, Rc::new(Sigmoid::new()));
+        let mut layer2 = LayerDense::new(3, 1, Rc::new(Sigmoid::new()));
+        let input = vec![1.1, 1.2, 1.3];
+        let target = 0.25;
+        for _ in 0..100000 {
+            let outp1 = layer1.forward(&input);
+            let outp2 = layer2.forward(&outp1);
+            let error = outp2[0] - target;
+            println!("Error: {}", error);
+            let grads1 = vec![error];
+            let grads2 = layer2.backwards(&grads1);
+            layer1.backwards(&grads2);
+        }
+        let outp1 = layer1.forward(&input);
+        let outp2 = layer2.forward(&outp1);
+        let error_delta = outp2[0] - target;
+        assert!(error_delta < 0.002);
     }
 }
