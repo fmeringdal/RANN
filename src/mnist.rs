@@ -31,7 +31,8 @@ fn run() -> Result<(Vec<Vec<f32>>, Vec<Vec<f32>>), Box<dyn Error>> {
         let label = record.get(0).unwrap().parse::<usize>().unwrap();
         let mut training = vec![0.0_f32; 28 * 28];
         for i in 0..28 * 28 {
-            training[i] = record.get(i + 1).unwrap().parse::<f32>().unwrap() / 255.;
+            // training[i] = record.get(i + 1).unwrap().parse::<f32>().unwrap() / 255.;
+            training[i] = 0.2;
         }
         labels.push(
             one_hot_encode(label, 10)
