@@ -1,8 +1,8 @@
-//tutorial-read-01.rs
 use crate::activations::{Sigmoid, RELU};
 use crate::math::one_hot_encode;
-use crate::node::LayerDense;
+use crate::node::{Layer, LayerDense, RannV2};
 use crate::rann::Rann;
+use std::cmp::Ordering;
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
@@ -20,7 +20,7 @@ fn run() -> Result<(Vec<Vec<f32>>, Vec<Vec<f32>>), Box<dyn Error>> {
     let mut training_set: Vec<Vec<f32>> = Vec::new();
     let mut labels: Vec<Vec<f32>> = Vec::new();
 
-    let max = 1;
+    let max = 100;
     let mut counter = 0;
     for result in rdr.records() {
         if counter > max {
@@ -31,8 +31,7 @@ fn run() -> Result<(Vec<Vec<f32>>, Vec<Vec<f32>>), Box<dyn Error>> {
         let label = record.get(0).unwrap().parse::<usize>().unwrap();
         let mut training = vec![0.0_f32; 28 * 28];
         for i in 0..28 * 28 {
-            // training[i] = record.get(i + 1).unwrap().parse::<f32>().unwrap() / 255.;
-            training[i] = 0.2;
+            training[i] = record.get(i + 1).unwrap().parse::<f32>().unwrap() / 255.;
         }
         labels.push(
             one_hot_encode(label, 10)
@@ -86,9 +85,8 @@ mod test {
 
     #[test]
     fn mnist_layer() {
-        let mut layer1 = LayerDense::new(28 * 28, 100, Rc::new(Sigmoid::new()));
-        let mut layer2 = LayerDense::new(100, 10, Rc::new(Sigmoid::new()));
-
+        let mut rannv2 = RannV2::new(vec![28 * 28, 128, 10]);
+        let train_count = 90;
         println!("Start");
         match run() {
             Err(err) => {
@@ -96,24 +94,61 @@ mod test {
                 process::exit(1);
             }
             Ok((training_set, labels)) => {
-                for _ in 0..1000 {
-                    for (train_set, target) in training_set.iter().zip(labels.clone()) {
-                        let out1 = layer1.forward(&train_set);
-                        let out2 = layer2.forward(&out1);
-                        let mut error = vec![0.; 10];
-                        for i in 0..10 {
-                            error[i] = out2[i] - target[i];
-                        }
-                        println!("-------------------------------------------");
-                        println!("Target: {:?}", target);
-                        println!("Pred: {:?}", out2);
-                        println!("Error: {}", error.iter().sum::<f32>());
-                        let grad3 = layer2.backwards(&error);
-                        let grad2 = layer1.backwards(&grad3);
-                        layer1.backwards(&grad2);
+                for i in 0..300 {
+                    println!("Iteration: {}", i);
+                    for (train_set, target) in
+                        training_set[..train_count].iter().zip(labels.clone())
+                    {
+                        let out = rannv2.forward(&train_set);
+                        // println!("---------------------------");
+                        // println!("Pred: {:?}", out);
+                        // println!("Target: {:?}", target);
+                        rannv2.backwards(&target);
                     }
+                    println!("Validation");
+                    let mut correct_count = 0;
+                    for (train_set, target) in
+                        training_set[train_count..].iter().zip(labels.clone())
+                    {
+                        let out = rannv2.forward(&train_set);
+                        let mut pred = 100;
+                        let mut targ = 1001;
+                        for i in 0..out.len() {
+                            if out[i] > 0.8 {
+                                pred = i;
+                            }
+                            if target[i] > 0.9 {
+                                targ = i;
+                            }
+                        }
+                        if pred == targ {
+                            correct_count += 1;
+                        }
+                    }
+                    println!("Correct: {} of 500", correct_count);
                 }
                 println!("Prediction for 10 first");
+                let mut correct_count = 0;
+                for (train_set, target) in training_set[train_count..].iter().zip(labels.clone()) {
+                    let out = rannv2.forward(&train_set);
+                    println!("---------------------------");
+                    let mut pred = 100;
+                    let mut targ = 1001;
+                    for i in 0..out.len() {
+                        if out[i] > 0.8 {
+                            pred = i;
+                            println!("Prediction: {}", i);
+                        }
+                        if target[i] > 0.9 {
+                            targ = i;
+                            println!("Target: {}", i);
+                        }
+                    }
+                    if pred == targ {
+                        correct_count += 1;
+                    }
+                }
+                println!("Correct: {} of 500", correct_count);
             }
         }
     }

@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 pub fn dot(vec1: &Vec<f32>, vec2: &Vec<f32>) -> f32 {
     vec1.iter().zip(vec2.iter()).map(|(x, y)| x * y).sum()
 }
@@ -57,6 +59,30 @@ pub fn mean_squared_error(vec1: &Vec<f32>, vec2: &Vec<f32>) -> f32 {
     error / size as f32
 }
 
+pub fn softmax(vals: &Vec<f32>) -> Vec<f32> {
+    let e = 2.71828_f32;
+    let max_val = vals
+        .iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+        .unwrap_or(&0.);
+    let vals = vals.iter().map(|val| e.powf(*val - max_val));
+    let denominator: f32 = vals.clone().sum();
+    vals.map(|val| val / denominator).collect()
+}
+
+pub fn softmax_derivative(vals: &Vec<f32>) -> Vec<f32> {
+    let e = 2.71828_f32;
+    let vals: Vec<f32> = vals.iter().map(|val| e.powf(*val)).collect();
+    let mut dervs = vec![0.; vals.len()];
+    let total: f32 = vals.iter().sum();
+    let total_square = total.powi(2);
+    for i in 0..vals.len() {
+        dervs[i] = vals[i] * (total - vals[i]) / total_square;
+    }
+
+    dervs
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -89,5 +115,37 @@ mod test {
         );
         assert_eq!(res[0], vec![62., -12.]);
         assert_eq!(res[1], vec![-39., -33.]);
+    }
+
+    #[test]
+    fn softmax_test() {
+        let test1 = vec![1.];
+        let res1 = softmax(&test1);
+        assert_eq!(res1, vec![1.]);
+
+        let test2 = vec![1., 1.];
+        let res2 = softmax(&test2);
+        assert_eq!(res2, vec![0.5, 0.5]);
+
+        let test2 = vec![1., 1., 2.];
+        let res2 = softmax(&test2);
+        let expected = vec![0.2119, 0.2119, 0.5761];
+        for (r, t) in res2.iter().zip(expected) {
+            assert!(r - t < 0.01);
+        }
+    }
+
+    #[test]
+    fn softmax_der_test() {
+        let test1 = vec![1.];
+        let res1 = softmax_derivative(&test1);
+        assert_eq!(res1, vec![0.]);
+
+        let test2 = vec![1., 2.];
+        let res2 = softmax_derivative(&test2);
+        let expected = vec![0.19661, 0.19661];
+        for (r, t) in res2.iter().zip(expected) {
+            assert!(r - t < 0.01);
+        }
     }
 }

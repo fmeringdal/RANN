@@ -1,4 +1,5 @@
 use crate::activations::{ActivationFunc, Sigmoid, RELU};
+use crate::math::{softmax, softmax_derivative};
 use rand::Rng;
 use std::rc::Rc;
 
@@ -51,10 +52,17 @@ impl Node {
     }
 
     pub fn update_weights(&mut self, delta_weights: Vec<f32>) {
+        // println!("Wight update: {:?}", delta_weights);
+        // panic!();
         for i in 0..delta_weights.len() {
             self.weights[i] -= delta_weights[i];
         }
     }
+}
+
+pub trait Layer {
+    fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32>;
+    fn backwards(&mut self, inputs: &Vec<f32>) -> Vec<f32>;
 }
 
 pub struct LayerDense {
@@ -78,17 +86,18 @@ impl LayerDense {
                 .collect(),
         }
     }
+}
 
-    pub fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
+impl Layer for LayerDense {
+    fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
         self.nodes
             .iter_mut()
             .map(|node| node.forward(inputs))
             .collect()
     }
 
-    pub fn backwards(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
-        // derivatives = [dc_da1, dc_da2]
-        let learning_rate = 0.1;
+    fn backwards(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
+        let learning_rate = 0.01;
         let mut derivatives_for_input_nodes = vec![0.; self.input_nodes_count];
         for i in 0..self.input_nodes_count {
             derivatives_for_input_nodes[i] = self
@@ -113,6 +122,98 @@ impl LayerDense {
         }
 
         derivatives_for_input_nodes
+    }
+}
+
+pub struct LayerSoftmax {
+    input_nodes_count: usize,
+    inputs: Vec<f32>,
+    pub outputs: Vec<f32>,
+}
+
+impl LayerSoftmax {
+    pub fn new(input_nodes_count: usize) -> Self {
+        Self {
+            input_nodes_count,
+            inputs: vec![],
+            outputs: vec![],
+        }
+    }
+}
+
+impl Layer for LayerSoftmax {
+    fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
+        self.inputs = inputs.clone();
+        self.outputs = softmax(inputs);
+        self.outputs.clone()
+    }
+
+    fn backwards(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
+        softmax_derivative(&self.inputs)
+            .iter()
+            .zip(derivatives)
+            .map(|(sd, d)| {
+                if sd.is_nan() {
+                    return 0.1 * d;
+                }
+                sd * d
+            })
+            .collect()
+    }
+}
+
+pub struct RannV2 {
+    layers: Vec<LayerDense>,
+    output_layer: LayerSoftmax,
+}
+
+impl RannV2 {
+    pub fn new(layer_sizes: Vec<usize>) -> Self {
+        assert!(layer_sizes.len() > 2);
+
+        let mut layers = vec![];
+        for i in 1..layer_sizes.len() {
+            layers.push(LayerDense::new(
+                layer_sizes[i - 1],
+                layer_sizes[i],
+                Rc::new(RELU::new()),
+            ));
+        }
+
+        Self {
+            layers,
+            output_layer: LayerSoftmax::new(layer_sizes[layer_sizes.len() - 1]),
+        }
+    }
+
+    pub fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
+        let mut output = inputs.clone();
+        for layer in self.layers.iter_mut() {
+            output = layer.forward(&output);
+        }
+        self.output_layer.forward(&output)
+    }
+
+    pub fn backwards(&mut self, target: &Vec<f32>) {
+        let error_grad: Vec<f32> = target
+            .iter()
+            .zip(self.output_layer.outputs.clone())
+            .map(|(t, pred)| pred - t)
+            .collect();
+        if false {
+            println!(
+                "Error: {}",
+                target
+                    .iter()
+                    .zip(self.output_layer.outputs.clone())
+                    .map(|(t, pred)| (pred - t).powi(2))
+                    .sum::<f32>()
+            );
+        }
+        let mut error_grad = self.output_layer.backwards(&error_grad);
+        for layer in self.layers.iter_mut().rev() {
+            error_grad = layer.backwards(&error_grad);
+        }
     }
 }
 
@@ -193,5 +294,25 @@ mod test {
         let outp2 = layer2.forward(&outp1);
         let error_delta = outp2[0] - target;
         assert!(error_delta < 0.002);
+    }
+
+    #[test]
+    fn rannv2_test() {
+        let mut rannv2 = RannV2::new(vec![3, 3, 8]);
+        let result = rannv2.forward(&vec![3., 4., 7.]);
+        assert!(result.into_iter().sum::<f32>() == 1.);
+    }
+
+    #[test]
+    fn rannv2_2test() {
+        let mut rannv2 = RannV2::new(vec![30, 20, 10]);
+        for _ in 0..100000 {
+            let result = rannv2.forward(&vec![
+                0.3, 0.4, 0.5, 0.1, 0.6, 0.7, 0.11, -0.5, -0.8, 0.17, 0.3, 0.4, 0.5, 0.1, 0.6, 0.7,
+                0.11, -0.5, -0.8, 0.17, 0.3, 0.4, 0.5, 0.1, 0.6, 0.7, 0.11, -0.5, -0.8, 0.17,
+            ]);
+            println!("Pred: {:?}", result);
+            rannv2.backwards(&vec![0., 1., 0., 0., 0., 0., 0., 0., 0., 0.]);
+        }
     }
 }

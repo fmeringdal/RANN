@@ -5,6 +5,7 @@ pub trait ActivationFunc {
 
 pub struct RELU {}
 pub struct Sigmoid {}
+pub struct Softmax {}
 
 impl RELU {
     pub fn new() -> Self {
@@ -13,6 +14,12 @@ impl RELU {
 }
 
 impl Sigmoid {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Softmax {
     pub fn new() -> Self {
         Self {}
     }
@@ -41,6 +48,22 @@ impl ActivationFunc for Sigmoid {
 
     fn compute_derivative(&self, val: f32) -> f32 {
         val * (1. - val)
+    }
+}
+
+impl ActivationFunc for Softmax {
+    fn compute(&self, val: f32) -> f32 {
+        if val > 0. {
+            return val;
+        }
+        0.
+    }
+
+    fn compute_derivative(&self, val: f32) -> f32 {
+        if val > 0. {
+            return 1.;
+        }
+        0.
     }
 }
 
