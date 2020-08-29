@@ -69,6 +69,7 @@ pub struct LayerDense {
     nodes: Vec<Node>,
     input_nodes_count: usize,
     nodes_count: usize,
+    pub outputs: Vec<f32>,
 }
 
 impl LayerDense {
@@ -84,16 +85,20 @@ impl LayerDense {
                 .iter()
                 .map(|_| Node::new(input_nodes_count, activation.clone(), None))
                 .collect(),
+            outputs: vec![],
         }
     }
 }
 
 impl Layer for LayerDense {
     fn forward(&mut self, inputs: &Vec<f32>) -> Vec<f32> {
-        self.nodes
+        let outputs = self
+            .nodes
             .iter_mut()
             .map(|node| node.forward(inputs))
-            .collect()
+            .collect();
+        self.outputs = outputs;
+        self.outputs.clone()
     }
 
     fn backwards(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
@@ -164,7 +169,7 @@ impl Layer for LayerSoftmax {
 
 pub struct RannV2 {
     layers: Vec<LayerDense>,
-    output_layer: LayerSoftmax,
+    //output_layer: LayerSoftmax,
 }
 
 impl RannV2 {
@@ -182,7 +187,7 @@ impl RannV2 {
 
         Self {
             layers,
-            output_layer: LayerSoftmax::new(layer_sizes[layer_sizes.len() - 1]),
+            //output_layer: LayerSoftmax::new(layer_sizes[layer_sizes.len() - 1]),
         }
     }
 
@@ -191,20 +196,21 @@ impl RannV2 {
         for layer in self.layers.iter_mut() {
             output = layer.forward(&output);
         }
-        self.output_layer.forward(&output)
+        // self.output_layer.forward(&output)
+        output
     }
 
     pub fn backwards(&mut self, target: &Vec<f32>) {
-        let error_grad: Vec<f32> = target
+        let mut error_grad: Vec<f32> = target
             .iter()
-            .zip(self.output_layer.outputs.clone())
+            .zip(self.layers[self.layers.len() - 1].outputs.clone())
             .map(|(t, pred)| pred - t)
             .collect();
         let debug = false;
         if debug {
             println!("Error: {:?}", error_grad);
         }
-        let mut error_grad = self.output_layer.backwards(&error_grad);
+        // let mut error_grad = self.output_layer.backwards(&error_grad);
         if debug {
             println!("Error: {:?}", error_grad);
         }
@@ -341,6 +347,33 @@ mod test {
                 } else {
                     println!("False");
                 }
+                rannv2.backwards(&target);
+            }
+        }
+    }
+
+    #[test]
+    fn xor() {
+        let mut rannv2 = RannV2::new(vec![2, 10, 1]);
+        let train_set = vec![
+            (vec![0., 0.], vec![0.]),
+            (vec![0., 1.], vec![1.]),
+            (vec![1., 0.], vec![1.]),
+            (vec![1., 1.], vec![0.]),
+        ];
+
+        for _ in 0..5000000 {
+            for i in 0..4 {
+                let (input, target) = train_set[i].clone();
+                let result = rannv2.forward(&input);
+                println!("Result: {:?}", result);
+                println!("Target: {:?}", target);
+                let result = result[0];
+                let target2 = target[0];
+                println!(
+                    "Correct: {}",
+                    (result > 0.5 && target2 > 0.5) || (result < 0.5 && target2 < 0.5)
+                );
                 rannv2.backwards(&target);
             }
         }
