@@ -52,7 +52,7 @@ impl Node {
     }
 
     pub fn update_weights(&mut self, delta_weights: Vec<f32>) {
-        // println!("Wight update: {:?}", delta_weights);
+        //println!("Weight update: {:?}", delta_weights);
         // panic!();
         for i in 0..delta_weights.len() {
             self.weights[i] -= delta_weights[i];
@@ -176,7 +176,7 @@ impl RannV2 {
             layers.push(LayerDense::new(
                 layer_sizes[i - 1],
                 layer_sizes[i],
-                Rc::new(RELU::new()),
+                Rc::new(Sigmoid::new()),
             ));
         }
 
@@ -200,19 +200,19 @@ impl RannV2 {
             .zip(self.output_layer.outputs.clone())
             .map(|(t, pred)| pred - t)
             .collect();
-        if false {
-            println!(
-                "Error: {}",
-                target
-                    .iter()
-                    .zip(self.output_layer.outputs.clone())
-                    .map(|(t, pred)| (pred - t).powi(2))
-                    .sum::<f32>()
-            );
+        let debug = false;
+        if debug {
+            println!("Error: {:?}", error_grad);
         }
         let mut error_grad = self.output_layer.backwards(&error_grad);
+        if debug {
+            println!("Error: {:?}", error_grad);
+        }
         for layer in self.layers.iter_mut().rev() {
             error_grad = layer.backwards(&error_grad);
+            if debug {
+                println!("Error: {:?}", error_grad);
+            }
         }
     }
 }
@@ -313,6 +313,36 @@ mod test {
             ]);
             println!("Pred: {:?}", result);
             rannv2.backwards(&vec![0., 1., 0., 0., 0., 0., 0., 0., 0., 0.]);
+        }
+    }
+
+    #[test]
+    fn rannv2_3test() {
+        let mut rannv2 = RannV2::new(vec![3, 2, 2]);
+        let train_set_1 = vec![vec![vec![1., 1., 1.], vec![1., 0.]]; 5000];
+        let train_set_2 = vec![vec![vec![5., 5., 5.], vec![0., 1.]]; 5000];
+
+        for _ in 0..50000 {
+            for i in 0..10000 {
+                let (input, target) = match i % 2 {
+                    0 => (train_set_1[i / 2][0].clone(), train_set_1[i / 2][1].clone()),
+                    _ => (
+                        train_set_2[(i - 1) / 2][0].clone(),
+                        train_set_2[(i - 1) / 2][1].clone(),
+                    ),
+                };
+                let result = rannv2.forward(&input);
+                println!("Result: {:?}", result);
+                println!("Target: {:?}", target);
+                if (result[0] > result[1] && target[0] > target[1])
+                    || (result[0] < result[1] && target[0] < target[1])
+                {
+                    println!("Correct");
+                } else {
+                    println!("False");
+                }
+                rannv2.backwards(&target);
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ fn run() -> Result<(Vec<Vec<f32>>, Vec<Vec<f32>>), Box<dyn Error>> {
     let mut training_set: Vec<Vec<f32>> = Vec::new();
     let mut labels: Vec<Vec<f32>> = Vec::new();
 
-    let max = 100;
+    let max = 6000;
     let mut counter = 0;
     for result in rdr.records() {
         if counter > max {
@@ -85,8 +85,8 @@ mod test {
 
     #[test]
     fn mnist_layer() {
-        let mut rannv2 = RannV2::new(vec![28 * 28, 128, 10]);
-        let train_count = 90;
+        let mut rannv2 = RannV2::new(vec![28 * 28, 32, 10]);
+        let train_count = 5000;
         println!("Start");
         match run() {
             Err(err) => {
@@ -94,15 +94,15 @@ mod test {
                 process::exit(1);
             }
             Ok((training_set, labels)) => {
-                for i in 0..300 {
+                for i in 0..20 {
                     println!("Iteration: {}", i);
                     for (train_set, target) in
                         training_set[..train_count].iter().zip(labels.clone())
                     {
                         let out = rannv2.forward(&train_set);
-                        // println!("---------------------------");
-                        // println!("Pred: {:?}", out);
-                        // println!("Target: {:?}", target);
+                        //println!("---------------------------");
+                        //println!("Pred: {:?}", out);
+                        //println!("Target: {:?}", target);
                         rannv2.backwards(&target);
                     }
                     println!("Validation");
@@ -125,23 +125,20 @@ mod test {
                             correct_count += 1;
                         }
                     }
-                    println!("Correct: {} of 500", correct_count);
+                    println!("Correct: {} of 1000", correct_count);
                 }
                 println!("Prediction for 10 first");
                 let mut correct_count = 0;
                 for (train_set, target) in training_set[train_count..].iter().zip(labels.clone()) {
                     let out = rannv2.forward(&train_set);
-                    println!("---------------------------");
                     let mut pred = 100;
                     let mut targ = 1001;
                     for i in 0..out.len() {
                         if out[i] > 0.8 {
                             pred = i;
-                            println!("Prediction: {}", i);
                         }
                         if target[i] > 0.9 {
                             targ = i;
-                            println!("Target: {}", i);
                         }
                     }
                     if pred == targ {
