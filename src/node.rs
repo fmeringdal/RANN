@@ -34,6 +34,10 @@ impl Node {
 
     pub fn forward(&mut self, inputs: &Vec<f32>) -> f32 {
         let output = self.weights.iter().zip(inputs).map(|(w, i)| w * i).sum();
+        if self.number_of_inputs == 100 && false {
+            println!("Inputs to node: {:?}", inputs);
+            println!("And outputs before acts: {:?}", output);
+        }
         let output = self.activation.compute(output);
         self.output = output;
         output
@@ -353,7 +357,7 @@ mod test {
 
     #[test]
     fn xor() {
-        let mut rannv2 = RannV2::new(vec![2, 4, 1]);
+        let mut rannv2 = RannV2::new(vec![2, 100, 1]);
         let train_set = vec![
             (vec![0., 0.], vec![0.]),
             (vec![0., 1.], vec![1.]),
@@ -361,20 +365,25 @@ mod test {
             (vec![1., 1.], vec![0.]),
         ];
 
-        for _ in 0..5000000 {
+        for j in 0..100 {
+            for _ in 0..10000 {
+                for i in 0..4 {
+                    let (input, target) = train_set[i].clone();
+                    let result = rannv2.forward(&input);
+                    let result = result[0];
+                    let target2 = target[0];
+                    rannv2.backwards(&target);
+                }
+            }
+            println!("Epoch: {} done", j);
+            let mut error = 0.;
             for i in 0..4 {
                 let (input, target) = train_set[i].clone();
                 let result = rannv2.forward(&input);
                 println!("Result: {:?}", result);
-                println!("Target: {:?}", target);
-                let result = result[0];
-                let target2 = target[0];
-                println!(
-                    "Correct: {}",
-                    (result > 0.5 && target2 > 0.5) || (result < 0.5 && target2 < 0.5)
-                );
-                rannv2.backwards(&target);
+                error += (result[0] - target[0]).powi(2);
             }
+            println!("Error {}", error);
         }
     }
 }

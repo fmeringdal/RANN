@@ -43,6 +43,11 @@ impl ActivationFunc for RELU {
 
 impl ActivationFunc for Sigmoid {
     fn compute(&self, val: f32) -> f32 {
+        if val > 4. {
+            return 0.98;
+        } else if val < -4. {
+            return -0.98;
+        }
         1_f32 / (1_f32 + 2.71828_f32.powf(-val))
     }
 
