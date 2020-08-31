@@ -46,7 +46,7 @@ impl ActivationFunc for Sigmoid {
         if val > 4. {
             return 0.98;
         } else if val < -4. {
-            return -0.98;
+            return 0.02;
         }
         1_f32 / (1_f32 + 2.71828_f32.powf(-val))
     }

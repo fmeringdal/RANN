@@ -1,5 +1,6 @@
 use crate::activations::{ActivationFunc, Sigmoid, RELU};
 use crate::math::{softmax, softmax_derivative};
+use rand::distributions::{Distribution, Normal};
 use rand::Rng;
 use std::rc::Rc;
 
@@ -29,7 +30,11 @@ impl Node {
 
     fn gen_weights(count: usize) -> Vec<f32> {
         let mut rng = rand::thread_rng();
-        vec![0; count].iter().map(|_| rng.gen::<f32>()).collect()
+        let normal = Normal::new(0., 1.);
+        vec![0; count]
+            .iter()
+            .map(|_| normal.sample(&mut rng) as f32)
+            .collect()
     }
 
     pub fn forward(&mut self, inputs: &Vec<f32>) -> f32 {
@@ -105,7 +110,7 @@ impl Layer for LayerDense {
     }
 
     fn backwards(&mut self, derivatives: &Vec<f32>) -> Vec<f32> {
-        let learning_rate = 0.01;
+        let learning_rate = 0.1;
         let mut derivatives_for_input_nodes = vec![0.; self.input_nodes_count];
         for i in 0..self.input_nodes_count {
             derivatives_for_input_nodes[i] = self
@@ -198,6 +203,9 @@ impl RannV2 {
         let mut output = inputs.clone();
         for layer in self.layers.iter_mut() {
             output = layer.forward(&output);
+            //if output.len() == 32 {
+            //println!("Output for 32: {:?}", output);
+            //}
         }
         // self.output_layer.forward(&output)
         output

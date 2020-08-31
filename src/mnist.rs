@@ -20,7 +20,7 @@ fn run() -> Result<(Vec<Vec<f32>>, Vec<Vec<f32>>), Box<dyn Error>> {
     let mut training_set: Vec<Vec<f32>> = Vec::new();
     let mut labels: Vec<Vec<f32>> = Vec::new();
 
-    let max = 6000;
+    let max = 30000;
     let mut counter = 0;
     for result in rdr.records() {
         if counter > max {
@@ -85,8 +85,8 @@ mod test {
 
     #[test]
     fn mnist_layer() {
-        let mut rannv2 = RannV2::new(vec![28 * 28, 32, 10]);
-        let train_count = 5000;
+        let mut rannv2 = RannV2::new(vec![28 * 28, 64, 10]);
+        let train_count = 28000;
         println!("Start");
         match run() {
             Err(err) => {
@@ -96,10 +96,15 @@ mod test {
             Ok((training_set, labels)) => {
                 for i in 0..20 {
                     println!("Iteration: {}", i);
+                    let mut counter = 0;
                     for (train_set, target) in
                         training_set[..train_count].iter().zip(labels.clone())
                     {
+                        counter += 1;
                         let out = rannv2.forward(&train_set);
+                        if counter % 2000 == 0 {
+                            println!("Progress in iter: {}", counter);
+                        }
                         //println!("---------------------------");
                         //println!("Pred: {:?}", out);
                         //println!("Target: {:?}", target);
@@ -107,25 +112,36 @@ mod test {
                     }
                     println!("Validation");
                     let mut correct_count = 0;
-                    for (train_set, target) in
-                        training_set[train_count..].iter().zip(labels.clone())
-                    {
+                    let mut correct_count_2 = 0;
+                    let mut counter = 0;
+                    for (train_set, target) in training_set.iter().zip(labels.clone()) {
                         let out = rannv2.forward(&train_set);
-                        let mut pred = 100;
+                        let (pred, _) = out
+                            .iter()
+                            .enumerate()
+                            .max_by(|(i, val), (j, val2)| {
+                                val.partial_cmp(val2).unwrap_or(Ordering::Equal)
+                            })
+                            .unwrap();
+                        //println!("Out: {:?}", out);
                         let mut targ = 1001;
                         for i in 0..out.len() {
-                            if out[i] > 0.8 {
-                                pred = i;
-                            }
                             if target[i] > 0.9 {
                                 targ = i;
                             }
                         }
+                        //println!("Pred: {} and Targ: {}", pred, targ);
                         if pred == targ {
-                            correct_count += 1;
+                            if counter < train_count {
+                                correct_count += 1;
+                            } else {
+                                correct_count_2 += 1;
+                            }
                         }
+                        counter += 1;
                     }
-                    println!("Correct: {} of 1000", correct_count);
+                    println!("Correct: {} of 28000", correct_count);
+                    println!("Correct for validation: {} of 2000", correct_count_2);
                 }
                 println!("Prediction for 10 first");
                 let mut correct_count = 0;
