@@ -1,6 +1,6 @@
 use crate::activations::{Sigmoid, RELU};
+use crate::layers::dense::{Layer, LayerDense};
 use crate::math::one_hot_encode;
-use crate::node::{Layer, LayerDense, RannV2};
 use crate::rann::Rann;
 use std::cmp::Ordering;
 use std::env;
@@ -61,31 +61,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn woll() {
-        println!("Start");
-        match run() {
-            Err(err) => {
-                println!("{}", err);
-                process::exit(1);
-            }
-            Ok((training_set, labels)) => {
-                println!("Labes: {:?}", labels);
-                let mut rann = Rann::new(&vec![28 * 28, 100, 1]);
-                for _ in 0..100 {
-                    rann.train(&training_set, &labels);
-                }
-                println!("Prediction for 10 first");
-                for i in 0..10 {
-                    let pred = rann.forward(&training_set[i]);
-                    println!("Predicted: {:?} vs real: {:?}", pred, labels[i]);
-                }
-            }
-        }
-    }
-
-    #[test]
     fn mnist_layer() {
-        let mut rannv2 = RannV2::new(vec![28 * 28, 64, 10]);
+        let mut rannv2 = Rann::new(vec![28 * 28, 64, 10]);
         let train_count = 28000;
         println!("Start");
         match run() {
